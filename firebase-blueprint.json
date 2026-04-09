@@ -1,0 +1,66 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information and roles",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email", "description": "User email address" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "photoURL": { "type": "string", "description": "User profile photo URL" },
+        "role": { "type": "string", "enum": ["student", "admin"], "description": "User role in the system" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "Course details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Course unique identifier" },
+        "title": { "type": "string", "description": "Course title" },
+        "category": { "type": "string", "description": "Course category" },
+        "duration": { "type": "string", "description": "Course duration" },
+        "students": { "type": "string", "description": "Number of students enrolled" },
+        "rating": { "type": "number", "description": "Course rating" },
+        "image": { "type": "string", "description": "Course image URL" },
+        "price": { "type": "string", "description": "Course price" },
+        "description": { "type": "string", "description": "Course description" },
+        "isFeatured": { "type": "boolean", "description": "Whether the course is featured" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Course creation timestamp" }
+      },
+      "required": ["title", "category", "price", "description"]
+    },
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "User inquiry details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Inquiry unique identifier" },
+        "fullName": { "type": "string", "description": "User's full name" },
+        "email": { "type": "string", "format": "email", "description": "User's email address" },
+        "courseName": { "type": "string", "description": "Name of the course interested in" },
+        "message": { "type": "string", "description": "User's message" },
+        "status": { "type": "string", "enum": ["new", "read", "replied"], "description": "Status of the inquiry" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Inquiry submission timestamp" }
+      },
+      "required": ["fullName", "email", "message", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and roles"
+    },
+    "/courses/{courseId}": {
+      "schema": "Course",
+      "description": "Course catalog"
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": "Inquiry",
+      "description": "User inquiries"
+    }
+  }
+}

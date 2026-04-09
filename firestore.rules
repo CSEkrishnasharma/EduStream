@@ -1,0 +1,133 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {userId} (Firebase Auth UID)
+// Fields:
+//   - uid: string (required) - Firebase Auth UID
+//   - email: string (required) - User email
+//   - displayName: string (optional) - User name
+//   - photoURL: string (optional) - User photo
+//   - role: string (required, enum: ['student', 'admin']) - User role
+//   - createdAt: timestamp (required) - Creation time
+//
+// Collection: courses
+// Document ID: {courseId} (Auto-generated)
+// Fields:
+//   - title: string (required) - Course title
+//   - category: string (required) - Course category
+//   - duration: string (required) - Course duration
+//   - students: string (required) - Student count string
+//   - rating: number (required) - Rating 0-5
+//   - image: string (optional) - Image URL
+//   - price: string (required) - Price string
+//   - description: string (required) - Detailed description
+//   - isFeatured: bool (optional) - Featured flag
+//   - createdAt: timestamp (required) - Creation time
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (
+          (request.auth.token.email in ["krishnasharma76542@gmail.com", "info@versatileitsolution.com", "hr@versatileitsolution.com"]) ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        );
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.email is string &&
+             data.role in ['student', 'admin'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidCourse(data) {
+      return data.keys().hasAll(['title', 'category', 'duration', 'students', 'rating', 'price', 'description', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.category is string && data.category.size() > 0 && data.category.size() < 100 &&
+             data.description is string && data.description.size() > 0 && data.description.size() < 2000 &&
+             data.rating is number && data.rating >= 0 && data.rating <= 5 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidInquiry(data) {
+      return data.keys().hasAll(['fullName', 'email', 'message', 'createdAt']) &&
+             data.fullName is string && data.fullName.size() > 0 && data.fullName.size() < 100 &&
+             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             data.message is string && data.message.size() > 0 && data.message.size() < 2000 &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own profile. Admins can read any profile.
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Users can create their own profile as 'student' initially. 
+      // Only admins can create other admins.
+      allow create: if isOwner(userId) && 
+                      isValidUser(request.resource.data) && 
+                      (request.resource.data.role == 'student' || isAdmin());
+      
+      // Users can update their own profile but cannot change their role.
+      // Admins can update any profile and change roles.
+      allow update: if (isOwner(userId) && 
+                        isValidUser(request.resource.data) && 
+                        request.resource.data.role == resource.data.role) || 
+                       isAdmin();
+      
+      allow delete: if isAdmin();
+    }
+
+    // Courses collection
+    match /courses/{courseId} {
+      // Anyone can read the course catalog
+      allow read: if true;
+      
+      // Only admins can manage courses
+      allow create: if isAdmin() && isValidCourse(request.resource.data);
+      allow update: if isAdmin() && isValidCourse(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Inquiries collection
+    match /inquiries/{inquiryId} {
+      // Only admins can read inquiries
+      allow read: if isAdmin();
+      
+      // Anyone can submit an inquiry
+      allow create: if isValidInquiry(request.resource.data);
+      
+      // Only admins can update (e.g. mark as read) or delete inquiries
+      allow update, delete: if isAdmin();
+    }
+  }
+}
